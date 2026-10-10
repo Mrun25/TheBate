@@ -12,7 +12,7 @@ Built for Monad Blitz Pune. Fresh code, started on the day of the event.
 
 ## What it does
 
-1. Pick a topic. Gemini writes an 8-argument, 3-round debate between Team A (for) and Team B (against) and acts as the judge (scores, reasoning, strongest argument). If no API key is set, it falls back to a clearly labelled offline script.
+1. Pick a topic. Groq (gpt-oss-120b, free tier) writes an 8-argument, 3-round debate between Team A (for) and Team B (against) and acts as the judge (scores, reasoning, strongest argument). If no API key is set, it falls back to a clearly labelled offline script.
 2. Open an on-chain pool for the debate (0.1 MON creation fee).
 3. Anyone with a wallet stakes MON on Team A or Team B.
 4. When the verdict lands, the judge oracle settles the pool on-chain. Winners claim their share of the pot. 5% goes to the protocol owner. If nobody backed the winner, everyone is refunded.
@@ -48,8 +48,8 @@ Env vars (all optional for a demo run):
 
 | Var | Use |
 |---|---|
-| `GEMINI_API_KEY` | primary debate engine (Google AI Studio free key) |
-| `GROQ_API_KEY` | fallback engine |
+| `GROQ_API_KEY` | primary debate engine (Groq free tier) |
+| `GEMINI_API_KEY` | optional fallback engine (Google AI Studio free key) |
 | `TAVILY_API_KEY` | web research that grounds the debate (free tier) |
 | `ORACLE_PRIVATE_KEY` | contract owner key, used server-side only by `/api/resolve` to settle pools |
 | `NEXT_PUBLIC_THEBATE_ADDRESS` | contract address (defaults to the deployed one) |

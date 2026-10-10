@@ -18,7 +18,7 @@ async function gemini(topic:string,key:string,c:string){
  const j=await r.json();return JSON.parse(j.candidates[0].content.parts[0].text);
 }
 async function groq(topic:string,key:string,c:string){
- const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+key},body:JSON.stringify({model:process.env.GROQ_MODEL||'qwen/qwen3-32b',response_format:{type:'json_object'},messages:[{role:'system',content:SYS},{role:'user',content:`Motion: ${topic}${c}`}]})});
+ const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+key},body:JSON.stringify({model:process.env.GROQ_MODEL||'openai/gpt-oss-120b',reasoning_effort:'low',max_tokens:1800,temperature:0.7,response_format:{type:'json_object'},messages:[{role:'system',content:SYS},{role:'user',content:`Motion: ${topic}${c}`}]})});
  if(!r.ok) throw new Error('groq '+r.status);
  const j=await r.json();return JSON.parse(j.choices[0].message.content.replace(/<think>[\s\S]*?<\/think>/g,''));
 }
@@ -27,8 +27,8 @@ export async function POST(req:Request){
  if(typeof topic!=='string'||!topic.trim()||topic.length>200) return NextResponse.json({error:'bad topic'},{status:400});
  const sources=await research(topic);const c=ctx(sources);
  const attempts:[string,()=>Promise<any>][]=[];
- if(process.env.GEMINI_API_KEY) attempts.push(['gemini',()=>gemini(topic,process.env.GEMINI_API_KEY!,c)]);
  if(process.env.GROQ_API_KEY) attempts.push(['groq',()=>groq(topic,process.env.GROQ_API_KEY!,c)]);
+ if(process.env.GEMINI_API_KEY) attempts.push(['gemini',()=>gemini(topic,process.env.GEMINI_API_KEY!,c)]);
  for(const [source,fn] of attempts){
   try{const o=await fn();
    if(Array.isArray(o.statements)&&o.statements.length===8&&['A','B'].includes(o.winner)) return NextResponse.json({source,...o,sources:sources.map(({title,url})=>({title,url}))});
