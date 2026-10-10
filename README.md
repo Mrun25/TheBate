@@ -28,9 +28,54 @@ Live on Monad Testnet - built for Monad Blitz Pune V3
 | AI | Gemini 3.5 Flash primary, Groq `gpt-oss-120b`/`20b` fallback (all free), Tavily web research (free) |
 | Rules | Fresh code written on event day. No pre-existing project code |
 
+## The problem and the fix
+
+Online arguments never end. There is no research, no structure, no stakes and no verdict, so nobody changes their mind and nobody is held to their claim.
+
+TheBate turns any hot take into a structured, researched debate run by AI agents, then lets people put MON behind their call on Monad. A judge scores it, the pool settles on-chain, and winners claim their share. One loop, end to end, in a browser, with no install.
+
+## What judges can verify in two minutes
+
+| Criterion | Where to check it |
+|---|---|
+| **Works live** | [the-bate.vercel.app](https://the-bate.vercel.app): type any motion, get a real researched debate and verdict |
+| **Real on-chain usage** | Contract `0x6e06e99cc6f4bb56cc10927483d72667b5f0d20c` on Monad Testnet with a full create, stake, stake, resolve, claim run (tx hashes in [Proof of a full on-chain run](#proof-of-a-full-on-chain-run-production-ui-pool-12)) |
+| **Technical depth** | Solidity pool contract (pro-rata payouts, 5% fee, refund path), server-side judge oracle, multi-model AI chain with automatic fallback, web and arXiv research grounding, per-statement source links, Vercel Blob community store |
+| **Completeness** | Landing, live debate, Think-Along room, viewer Q&A, verdict card, community feed with permalinks, mobile layout, error and 404 pages, demo mode |
+| **Resilience** | Every layer has a fallback: see [Fallbacks](#fallbacks-nothing-dead-ends) |
+| **Honesty** | See [What is real and what is not](#what-is-real-and-what-is-not) below |
+| **Demo** | [90s narrated video](docs/thebate-demo.mp4) and a [one-click demo mode](https://the-bate.vercel.app/debate/demo?demo=1&topic=Has%20AI%20achieved%20AGI%3F) that needs no wallet |
+
+## Features
+
+| Feature | What it does |
+|---|---|
+| Arena debate | 10 personas in 2 teams argue a motion in 3 rounds, each answering the one before. Tone selectable: balanced, heated, academic, playful |
+| Research grounding | Tavily web search plus arXiv papers feed the debate. Each statement shows a source link only when a real search result matches it. The model never writes URLs |
+| AI judge | Scores both teams, names the strongest argument, explains the verdict |
+| Prediction pools | One click opens a pool on Monad Testnet. Stake on Team A or B, settle, claim |
+| Think-Along | Join the table as a seat, ask the panel questions, get answers grounded in live research |
+| Community | Post a finished debate or think-along, share a permalink, like and comment |
+| Demo mode | A scripted debate and simulated pool for anyone without a wallet |
+
+![live debate](docs/live-debate.png)
+![verdict](docs/verdict-live.png)
+![community](docs/community.png)
+
+## What is real and what is not
+
+| Real | Not (yet) |
+|---|---|
+| Contract deployed on Monad Testnet, with the transactions listed below | Testnet MON only, no real money |
+| Live AI debates from Gemini or Groq, grounded in live search | The offline script and Watch demo are scripted and labelled as such |
+| Research links come from real search results | A link means the source is related by keywords, not that it proves the claim |
+| Judge verdict is written on-chain by the owner key | The judge oracle is centralized, so you trust that key. A production version would use several judges or a dispute window |
+| Free-tier AI keys can rate-limit under load | Fallbacks cover it, but a very busy moment can show the offline script (footer says which engine ran) |
+| Source is in `contracts/` | Explorer source verification is not confirmed, so we do not claim it |
+
 ## How it works
 
-1. **Pick a motion.** The server researches it on the web (Tavily), then Groq writes an 8-argument, 3-round debate between Team A (for) and Team B (against) and judges it: scores, reasoning, strongest argument. Research links show under the verdict.
+1. **Pick a motion.** The server researches it on the web (Tavily), then an AI model (Gemini, with Groq as fallback) writes an 8-argument, 3-round debate between Team A (for) and Team B (against) and judges it: scores, reasoning, strongest argument. Research links show under the verdict.
 2. **Open a pool.** One click creates an on-chain pool for that debate (0.1 MON creation fee).
 3. **Stake.** Anyone with a wallet stakes MON on Team A or Team B.
 4. **Settle.** When the verdict lands, the judge oracle writes the winner on-chain.
