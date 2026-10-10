@@ -47,3 +47,6 @@
 .sources-card a{color:#f5f5f5;text-decoration:underline;text-decoration-color:#4FC3F7;overflow-wrap:anywhere}.sources-card small{color:#8d7f99}
 .hero-cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
 @media(max-width:767px){.hero-cta button{flex:1 1 40%;min-height:42px}.demo-banner{font-size:11px}}
+.style-options{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}
+.style-options button{padding:8px 14px;border:1px solid #44324f;color:#bda4cc;font-size:12px;min-height:38px}
+.style-options button.chosen{border-color:#FFD54F;color:#FFD54F;background:#1d1830}
