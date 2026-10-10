@@ -78,7 +78,12 @@ sequenceDiagram
 
 | If this fails | The app does this |
 |---|---|
-| Groq rate limit or error | Falls back to Gemini, then to a clearly labelled offline script. The footer shows which engine ran |
+| Tavily research fails | Debate runs without web sources; the verdict panel shows no research links |
+| Groq `gpt-oss-120b` rate limit or error | Falls back to Groq `gpt-oss-20b` (free) |
+| Both Groq models fail | Falls back to Gemini (if a key is set), then to a clearly labelled offline script. The footer shows which engine ran |
+| Viewer questions (`/api/ask`) | Tavily-grounded answer via Groq, then Gemini, then research snippets |
+| Community feed (`/community`) | Vercel Blob store; if unreachable the page shows an empty state, debates still work |
+| Watch demo (`/debate/demo?demo=1`) | Fully scripted, no API calls, so it works with every provider down |
 | Tavily unavailable | Debate still runs, without research links |
 | An RPC node is down | Reads rotate across 4 Monad Testnet RPCs with timeouts |
 | No wallet in the browser | Pool stays readable, buttons explain what to do, MetaMask deep link and faucet link shown |
