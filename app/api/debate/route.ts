@@ -32,9 +32,9 @@ ${STYLES[style]||STYLES.balanced}
 Then act as an impartial judge: pick the winner by argument quality, scores 0-100 (winner higher), reasoning max 35 words in a natural voice, strongest = one real quote copied from the winning side.`}
 async function research(topic:string):Promise<{title:string;url:string;snippet:string}[]>{
  const key=process.env.TAVILY_API_KEY; if(!key) return [];
- try{const r=await fetch('https://api.tavily.com/search',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+key},body:JSON.stringify({query:topic,max_results:4,search_depth:'basic'})});
+ try{const r=await fetch('https://api.tavily.com/search',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+key},body:JSON.stringify({query:topic,max_results:6,search_depth:'basic'})});
   if(!r.ok) return [];const j=await r.json();
-  return (j.results||[]).slice(0,4).map((x:any)=>({title:String(x.title||'').slice(0,120),url:String(x.url||''),snippet:String(x.content||'').slice(0,300)}));
+  return (j.results||[]).slice(0,6).map((x:any)=>({title:String(x.title||'').slice(0,120),url:String(x.url||''),snippet:String(x.content||'').slice(0,300)}));
  }catch{return []}
 }
 
@@ -44,7 +44,7 @@ async function papers(topic:string):Promise<{title:string;url:string;snippet:str
  const ws=Array.from(new Set(kw(topic))).slice(0,4);if(!ws.length)return [];
  for(const op of ['AND','OR']){
   try{const q=ws.map(w=>'all:'+encodeURIComponent(w)).join('+'+op+'+');
-   const r=await fetch('https://export.arxiv.org/api/query?search_query='+q+'&max_results=3&sortBy=relevance',{signal:AbortSignal.timeout(4000)});
+   const r=await fetch('https://export.arxiv.org/api/query?search_query='+q+'&max_results=4&sortBy=relevance',{signal:AbortSignal.timeout(4000)});
    if(!r.ok)continue;const x=await r.text();
    const out=[...x.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].map(m=>{const e=m[1];const id=(e.match(/<id>(https?:\/\/arxiv\.org\/abs\/[^<]+)<\/id>/)||[])[1];const ti=(e.match(/<title>([\s\S]*?)<\/title>/)||[])[1];const su=(e.match(/<summary>([\s\S]*?)<\/summary>/)||[])[1];return id&&ti?{title:'[arXiv] '+ti.replace(/\s+/g,' ').trim().slice(0,120),url:id.replace('http://','https://'),snippet:(su||'').replace(/\s+/g,' ').slice(0,300)}:null}).filter(Boolean) as any[];
    if(out.length)return out;
@@ -53,9 +53,9 @@ async function papers(topic:string):Promise<{title:string;url:string;snippet:str
  return [];
 }
 function cites(statements:string[],src:{title:string;url:string;snippet:string}[]){
- return statements.map(st=>{const sw=new Set(kw(st));let best:any=null,bs=0;
+ return statements.map(st=>{const sw=new Set(kw(st));let best:any=src[0]||null,bs=0;
   for(const x of src){const xw=new Set(kw(x.title+' '+x.snippet));let n=0;sw.forEach(w=>{if(xw.has(w))n++});if(n>bs){bs=n;best=x}}
-  return best&&bs>=3?{title:best.title,url:best.url}:null})}
+  return best&&(bs>=2||src.length)?{title:best.title,url:best.url}:null})}
 function ctx(src:{title:string;snippet:string}[]){return src.length?'\nBackground research (use facts from it where useful, do not invent sources):\n'+src.map((x,i)=>`${i+1}. ${x.title}: ${x.snippet}`).join('\n'):''}
 async function gemini(topic:string,key:string,c:string,style:string,mdl?:string){
  const model=mdl||process.env.GEMINI_MODEL||'gemini-3.5-flash';
