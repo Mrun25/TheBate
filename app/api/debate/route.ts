@@ -37,6 +37,25 @@ async function research(topic:string):Promise<{title:string;url:string;snippet:s
   return (j.results||[]).slice(0,4).map((x:any)=>({title:String(x.title||'').slice(0,120),url:String(x.url||''),snippet:String(x.content||'').slice(0,300)}));
  }catch{return []}
 }
+
+const STOP=new Set(['should','would','could','about','their','there','which','these','those','have','does','will','with','that','this','from','what','when','then','than','they','your','into','more','most','been','being','were','also','just','like','only','very','much','many','some','such','because','where','while','still','even','every','people']);
+function kw(t:string){return t.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w.length>3&&!STOP.has(w))}
+async function papers(topic:string):Promise<{title:string;url:string;snippet:string}[]>{
+ const ws=Array.from(new Set(kw(topic))).slice(0,4);if(!ws.length)return [];
+ for(const op of ['AND','OR']){
+  try{const q=ws.map(w=>'all:'+encodeURIComponent(w)).join('+'+op+'+');
+   const r=await fetch('https://export.arxiv.org/api/query?search_query='+q+'&max_results=3&sortBy=relevance',{signal:AbortSignal.timeout(4000)});
+   if(!r.ok)continue;const x=await r.text();
+   const out=[...x.matchAll(/<entry>([\s\S]*?)<\/entry>/g)].map(m=>{const e=m[1];const id=(e.match(/<id>(https?:\/\/arxiv\.org\/abs\/[^<]+)<\/id>/)||[])[1];const ti=(e.match(/<title>([\s\S]*?)<\/title>/)||[])[1];const su=(e.match(/<summary>([\s\S]*?)<\/summary>/)||[])[1];return id&&ti?{title:'[arXiv] '+ti.replace(/\s+/g,' ').trim().slice(0,120),url:id.replace('http://','https://'),snippet:(su||'').replace(/\s+/g,' ').slice(0,300)}:null}).filter(Boolean) as any[];
+   if(out.length)return out;
+  }catch{}
+ }
+ return [];
+}
+function cites(statements:string[],src:{title:string;url:string;snippet:string}[]){
+ return statements.map(st=>{const sw=new Set(kw(st));let best:any=null,bs=0;
+  for(const x of src){const xw=new Set(kw(x.title+' '+x.snippet));let n=0;sw.forEach(w=>{if(xw.has(w))n++});if(n>bs){bs=n;best=x}}
+  return best&&bs>=3?{title:best.title,url:best.url}:null})}
 function ctx(src:{title:string;snippet:string}[]){return src.length?'\nBackground research (use facts from it where useful, do not invent sources):\n'+src.map((x,i)=>`${i+1}. ${x.title}: ${x.snippet}`).join('\n'):''}
 async function gemini(topic:string,key:string,c:string,style:string,mdl?:string){
  const model=mdl||process.env.GEMINI_MODEL||'gemini-3.5-flash';
@@ -55,7 +74,7 @@ function onTopic(o:any,topic:string){const words=topic.toLowerCase().replace(/[^
 export async function POST(req:Request){
  const {topic,style:st}=await req.json();const style=typeof st==='string'&&st in STYLES?st:'balanced';
  if(typeof topic!=='string'||!topic.trim()||topic.length>200) return NextResponse.json({error:'bad topic'},{status:400});
- const sources=await research(topic);const c=ctx(sources);
+ const [web,pap]=await Promise.all([research(topic),papers(topic)]);const sources=[...web,...pap];const c=ctx(sources);
  const attempts:[string,()=>Promise<any>][]=[];
  if(process.env.GEMINI_API_KEY) attempts.push(['gemini',()=>gemini(topic,process.env.GEMINI_API_KEY!,c,style)]);
  if(process.env.GEMINI_API_KEY) attempts.push(['gemini-lite',()=>gemini(topic,process.env.GEMINI_API_KEY!,c,style,'gemini-3.1-flash-lite')]);
@@ -65,7 +84,7 @@ export async function POST(req:Request){
   for(let t=0;t<2;t++){
    try{const o=clean(await fn());
     const ok=Array.isArray(o?.statements)&&o.statements.length===8&&['A','B'].includes(o.winner);
-    if(ok&&onTopic(o,topic)) return NextResponse.json({source,...o,sources:sources.map(({title,url})=>({title,url}))});
+    if(ok&&onTopic(o,topic)) return NextResponse.json({source,...o,cites:cites(o.statements,sources),sources:sources.map(({title,url})=>({title,url}))});
     console.error('llm rejected',source,t,ok?'off-topic':'bad shape',JSON.stringify(o?.statements||o).slice(0,500));
    }catch(e){console.error('llm fail',source,t,String(e).slice(0,160))}
   }

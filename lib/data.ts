@@ -11,7 +11,7 @@ export const agents:Agent[]=[
 {id:'b3',name:'Dr. Leela Sen',role:'Academic',team:'B'},
 {id:'b4',name:'Kabir Shah',role:'Policy researcher',team:'B'},
 {id:'b5',name:'Zoya Ali',role:'Engineer',team:'B'}];
-export interface Statement {id:string;agentId:string;round:number;parentId?:string;type:'NEW ANGLE'|'COUNTER'|'REINFORCE'|'WILDCARD'|'YOU';text:string;confidence:number;}
+export interface Statement {id:string;agentId:string;round:number;parentId?:string;type:'NEW ANGLE'|'COUNTER'|'REINFORCE'|'WILDCARD'|'YOU';text:string;confidence:number;cite?:{title:string;url:string};}
 export const script:Statement[]=[
 {id:'s1',agentId:'a1',round:1,type:'NEW ANGLE',text:'Ask what AGI means and the goalposts move every year. A system that writes working code, passes medical exams and explains physics to a ten-year-old is not narrow anymore. At some point the line moved, not the thing.',confidence:78},
 {id:'s2',agentId:'b1',round:1,parentId:'s1',type:'COUNTER',text:'Kavya, passing exams is a memory test with extra steps. On puzzles a model has never seen, like ARC-AGI, the same systems stumble on tasks a child solves in seconds. That gap is the whole argument.',confidence:84},
