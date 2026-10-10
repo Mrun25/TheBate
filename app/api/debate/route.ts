@@ -30,11 +30,15 @@ Hard rules:
 - Banned phrases: "it's important to note", "in conclusion", "delve", "landscape", "tapestry", "multifaceted", "at the end of the day", "double-edged sword", "game-changer", "nuanced".
 ${STYLES[style]||STYLES.balanced}
 Then act as an impartial judge: pick the winner by argument quality, scores 0-100 (winner higher), reasoning max 35 words in a natural voice, strongest = one real quote copied from the winning side.`}
+const BAD=['mypaperhelp','studymode','123helpme','grademiners','paperap','essaytyper','bartleby','coursehero','brainly','chegg','scribd','studocu','ukessays','essaypro','writemyessay','samplius','ipl.org','gradesfixer','phdessay','edubirdie','essayshark','papersowl','bookrags','cliffsnotes','quizlet','academia.edu','pinterest','quora','medium.com','linkedin.com','facebook.com','reddit.com','youtube.com','tiktok.com'];
+const GOOD=/(arxiv\.org|doi\.org|nature\.com|science\.org|\.edu$|\.gov$|\.ac\.[a-z]+$|brookings|pewresearch|who\.int|oecd|worldbank|nih\.gov|reuters|bbc\.|nytimes|theguardian|economist|wsj\.com|bloomberg|apnews|npr\.org|ft\.com|wikipedia\.org|hbr\.org|mckinsey|stanford|mit\.edu|ieee|acm\.org|springer|sciencedirect|wiley|jstor)/i;
+function host(u:string){try{return new URL(u).hostname.toLowerCase()}catch{return ''}}
+function goodSrc(x:{url:string}){const h=host(x.url);return !!h&&!BAD.some(b=>h.includes(b))}
 async function research(topic:string):Promise<{title:string;url:string;snippet:string}[]>{
  const key=process.env.TAVILY_API_KEY; if(!key) return [];
- try{const r=await fetch('https://api.tavily.com/search',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+key},body:JSON.stringify({query:topic,max_results:6,search_depth:'basic'})});
+ try{const r=await fetch('https://api.tavily.com/search',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+key},body:JSON.stringify({query:topic,max_results:10,search_depth:'basic'})});
   if(!r.ok) return [];const j=await r.json();
-  return (j.results||[]).slice(0,6).map((x:any)=>({title:String(x.title||'').slice(0,120),url:String(x.url||''),snippet:String(x.content||'').slice(0,300)}));
+  return (j.results||[]).map((x:any)=>({title:String(x.title||'').slice(0,120),url:String(x.url||''),snippet:String(x.content||'').slice(0,300)})).filter(goodSrc).sort((a:any,b:any)=>Number(GOOD.test(host(b.url)))-Number(GOOD.test(host(a.url)))).slice(0,6);
  }catch{return []}
 }
 
