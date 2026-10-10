@@ -39,7 +39,7 @@ async function research(topic:string):Promise<{title:string;url:string;snippet:s
 }
 function ctx(src:{title:string;snippet:string}[]){return src.length?'\nBackground research (use facts from it where useful, do not invent sources):\n'+src.map((x,i)=>`${i+1}. ${x.title}: ${x.snippet}`).join('\n'):''}
 async function gemini(topic:string,key:string,c:string,style:string){
- const model=process.env.GEMINI_MODEL||'gemini-2.5-flash';
+ const model=process.env.GEMINI_MODEL||'gemini-3.5-flash';
  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':key},body:JSON.stringify({systemInstruction:{parts:[{text:system(style)}]},contents:[{role:'user',parts:[{text:`Motion: ${topic}\nMake every statement about this motion specifically. Open with ${OPENERS[Math.floor(Math.random()*OPENERS.length)]}. Variation seed ${Math.random().toString(36).slice(2,8)}.${c}`}]}],generationConfig:{responseMimeType:'application/json',temperature:0.85}})});
  if(!r.ok) throw new Error('gemini '+r.status+' '+(await r.text()).slice(0,160));
  const j=await r.json();return JSON.parse(j.candidates[0].content.parts[0].text);
@@ -57,9 +57,9 @@ export async function POST(req:Request){
  if(typeof topic!=='string'||!topic.trim()||topic.length>200) return NextResponse.json({error:'bad topic'},{status:400});
  const sources=await research(topic);const c=ctx(sources);
  const attempts:[string,()=>Promise<any>][]=[];
+ if(process.env.GEMINI_API_KEY) attempts.push(['gemini',()=>gemini(topic,process.env.GEMINI_API_KEY!,c,style)]);
  if(process.env.GROQ_API_KEY) attempts.push(['groq',()=>groq(topic,process.env.GROQ_API_KEY!,c,style)]);
  if(process.env.GROQ_API_KEY) attempts.push(['groq-20b',()=>groq(topic,process.env.GROQ_API_KEY!,c,style,'openai/gpt-oss-20b')]);
- if(process.env.GEMINI_API_KEY) attempts.push(['gemini',()=>gemini(topic,process.env.GEMINI_API_KEY!,c,style)]);
  for(const [source,fn] of attempts){
   for(let t=0;t<2;t++){
    try{const o=clean(await fn());

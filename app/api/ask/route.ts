@@ -19,7 +19,7 @@ async function groq(key:string,p:{system:string;user:string}){
  if(!r.ok)throw new Error('groq '+r.status);const j=await r.json();return String(j.choices[0].message.content||'').replace(/<think>[\s\S]*?<\/think>/g,'').trim();
 }
 async function gemini(key:string,p:{system:string;user:string}){
- const model=process.env.GEMINI_MODEL||'gemini-2.5-flash';
+ const model=process.env.GEMINI_MODEL||'gemini-3.5-flash';
  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':key},body:JSON.stringify({systemInstruction:{parts:[{text:p.system}]},contents:[{role:'user',parts:[{text:p.user}]}],generationConfig:{temperature:0.7}})});
  if(!r.ok)throw new Error('gemini '+r.status);const j=await r.json();return String(j.candidates[0].content.parts[0].text||'').trim();
 }
@@ -30,9 +30,9 @@ export async function POST(req:Request){
  if(!q)return NextResponse.json({error:'no question'},{status:400});
  const src=await research(`${q} ${topic}`.slice(0,300));const p=prompts(topic,q,name,role,recent,src);
  const attempts:[string,()=>Promise<string>][]=[];
- if(process.env.GROQ_API_KEY)attempts.push(['groq',()=>groq(process.env.GROQ_API_KEY!,p)]);
  if(process.env.GEMINI_API_KEY)attempts.push(['gemini',()=>gemini(process.env.GEMINI_API_KEY!,p)]);
- for(const [source,fn] of attempts){for(let t=0;t<2;t++){try{const a=await fn();if(a.length>20)return NextResponse.json({source,answer:a,sources:src.map(({title,url})=>({title,url}))})}catch(e){console.error('ask fail',source,String(e).slice(0,120))}}}
+ if(process.env.GROQ_API_KEY)attempts.push(['groq',()=>groq(process.env.GROQ_API_KEY!,p)]);
+  for(const [source,fn] of attempts){for(let t=0;t<2;t++){try{const a=await fn();if(a.length>20)return NextResponse.json({source,answer:a,sources:src.map(({title,url})=>({title,url}))})}catch(e){console.error('ask fail',source,String(e).slice(0,120))}}}
  const s=src[0];
  const answer=s?`Short answer from what I can find: ${s.snippet.replace(/\s+/g,' ').slice(0,240)}... (${s.title}). The live AI engine is busy, so that is a quick research-only reply.`:`I can't reach the live engine right now, so I can't give you a researched answer to that. Try asking again in a few seconds.`;
  return NextResponse.json({source:'research',answer,sources:src.map(({title,url})=>({title,url}))});
