@@ -44,8 +44,8 @@ async function gemini(topic:string,key:string,c:string,style:string){
  if(!r.ok) throw new Error('gemini '+r.status+' '+(await r.text()).slice(0,160));
  const j=await r.json();return JSON.parse(j.candidates[0].content.parts[0].text);
 }
-async function groq(topic:string,key:string,c:string,style:string){
- const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+key},body:JSON.stringify({model:process.env.GROQ_MODEL||'openai/gpt-oss-120b',reasoning_effort:'low',max_tokens:5000,temperature:0.9,response_format:{type:'json_schema',json_schema:{name:'debate',strict:true,schema:{type:'object',additionalProperties:false,required:['statements','winner','scoreA','scoreB','reasoning','strongest'],properties:{statements:{type:'array',items:{type:'string'},minItems:8,maxItems:8},winner:{type:'string',enum:['A','B']},scoreA:{type:'integer'},scoreB:{type:'integer'},reasoning:{type:'string'},strongest:{type:'string'}}}}},messages:[{role:'system',content:system(style)},{role:'user',content:`Motion: ${topic}\nMake every statement about this motion specifically. Open with ${OPENERS[Math.floor(Math.random()*OPENERS.length)]}. Variation seed ${Math.random().toString(36).slice(2,8)}.${c}`}]})});
+async function groq(topic:string,key:string,c:string,style:string,model?:string){
+ const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+key},body:JSON.stringify({model:model||process.env.GROQ_MODEL||'openai/gpt-oss-120b',reasoning_effort:'low',max_tokens:3500,temperature:0.9,response_format:{type:'json_schema',json_schema:{name:'debate',strict:true,schema:{type:'object',additionalProperties:false,required:['statements','winner','scoreA','scoreB','reasoning','strongest'],properties:{statements:{type:'array',items:{type:'string'},minItems:8,maxItems:8},winner:{type:'string',enum:['A','B']},scoreA:{type:'integer'},scoreB:{type:'integer'},reasoning:{type:'string'},strongest:{type:'string'}}}}},messages:[{role:'system',content:system(style)},{role:'user',content:`Motion: ${topic}\nMake every statement about this motion specifically. Open with ${OPENERS[Math.floor(Math.random()*OPENERS.length)]}. Variation seed ${Math.random().toString(36).slice(2,8)}.${c}`}]})});
  if(!r.ok){const tx=await r.text();try{const fg=JSON.parse(tx)?.error?.failed_generation;if(fg){const m=String(fg).match(/\{[\s\S]*\}/);if(m)return JSON.parse(m[0])}}catch{}throw new Error('groq '+r.status+' '+tx.slice(0,200))}
  const j=await r.json();return JSON.parse(j.choices[0].message.content.replace(/<think>[\s\S]*?<\/think>/g,''));
 }
@@ -58,6 +58,7 @@ export async function POST(req:Request){
  const sources=await research(topic);const c=ctx(sources);
  const attempts:[string,()=>Promise<any>][]=[];
  if(process.env.GROQ_API_KEY) attempts.push(['groq',()=>groq(topic,process.env.GROQ_API_KEY!,c,style)]);
+ if(process.env.GROQ_API_KEY) attempts.push(['groq-20b',()=>groq(topic,process.env.GROQ_API_KEY!,c,style,'openai/gpt-oss-20b')]);
  if(process.env.GEMINI_API_KEY) attempts.push(['gemini',()=>gemini(topic,process.env.GEMINI_API_KEY!,c,style)]);
  for(const [source,fn] of attempts){
   for(let t=0;t<2;t++){
