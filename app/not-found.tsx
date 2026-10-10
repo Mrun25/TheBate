@@ -1,0 +1,1 @@
+export default function NotFound(){return <main style={{minHeight:'100dvh',display:'grid',placeItems:'center',padding:24,background:'#0D0D1A',color:'#f5f5f5',fontFamily:'Space Grotesk, sans-serif',textAlign:'center'}}><div><h1>Room not found</h1><a href="/" style={{color:'#4FC3F7'}}>Back to the house</a></div></main>}

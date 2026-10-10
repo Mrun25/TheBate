@@ -1,0 +1,10 @@
+const {chromium}=require('playwright');
+(async()=>{const b=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
+const U=process.env.U||'https://thebate-three.vercel.app';
+const ctx=await b.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true});const p=await ctx.newPage();
+await p.goto(U+'/debate/demo?topic=Should%20AI%20replace%20judges%3F',{waitUntil:'networkidle'});await p.waitForTimeout(2500);
+await p.getByRole('button',{name:'Jump to verdict'}).click().catch(e=>console.log('nojump'));await p.waitForTimeout(2500);
+await p.screenshot({path:'/tmp/v1.png'});
+await p.evaluate(()=>window.scrollTo(0,document.body.scrollHeight));await p.waitForTimeout(800);await p.screenshot({path:'/tmp/v2.png'});
+console.log(await p.evaluate(()=>document.documentElement.scrollHeight));
+await b.close()})();
