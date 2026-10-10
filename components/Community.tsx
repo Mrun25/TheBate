@@ -1,5 +1,6 @@
 'use client';
 import {useEffect,useState} from 'react';
+import {usePathname,useRouter} from 'next/navigation';
 import {agents} from '@/lib/data';
 type Brief={id:string;kind:'debate'|'thinkalong';topic:string;createdAt:number;judge:{winner:string;a:number;b:number};likes:number;comments:number};
 function cid(){let c=localStorage.getItem('thebate-client');if(!c){c=Math.random().toString(36).slice(2,12);localStorage.setItem('thebate-client',c)}return c}
@@ -28,10 +29,10 @@ function Detail({id,back}:{id:string;back:()=>void}){
  </div>
 }
 export default function Community({onNew}:{onNew:()=>void}){
- const [posts,setPosts]=useState<Brief[]|null>(null),[id,setId]=useState<string|null>(null);
- useEffect(()=>{const m=location.pathname.match(/^\/community\/([a-z0-9]+)/);if(m)setId(m[1]);fetch('/api/community').then(r=>r.json()).then(o=>setPosts(o.posts||[])).catch(()=>setPosts([]))},[]);
- function open(i:string){history.pushState({},'','/community/'+i);setId(i)}
- function back(){history.pushState({},'','/community');setId(null)}
+ const [posts,setPosts]=useState<Brief[]|null>(null),pathname=usePathname(),router=useRouter();const m0=pathname.match(/^\/community\/([a-z0-9]+)/);const id=m0?m0[1]:null;
+ useEffect(()=>{fetch('/api/community').then(r=>r.json()).then(o=>setPosts(o.posts||[])).catch(()=>setPosts([]))},[pathname]);
+ function open(i:string){router.push('/community/'+i)}
+ function back(){router.push('/community')}
  if(id)return <section className="gallery"><Detail id={id} back={back}/></section>;
  const sec=(k:'debate'|'thinkalong',title:string)=>{const l=(posts||[]).filter(p=>p.kind===k);return <div style={{margin:'26px 0'}}><h2 className="eyebrow" style={{fontSize:14}}>{title} ({l.length})</h2>{l.length===0?<div className="gallery-note">Nothing here yet. Finish a {k==='debate'?'debate':'think-along'} and hit "Post to community".</div>:<div className="gallery-grid">{l.map(p=><Card key={p.id} p={p} open={open}/>)}</div>}</div>};
  return <section className="gallery"><p className="eyebrow">THE DEBATE HOUSE / COMMUNITY</p><h1>Debates and think-alongs from the community.</h1><p className="subtitle">Every post has the judge's verdict, the full transcript, likes and comments.</p>{posts===null?<div className="gallery-note">Loading...</div>:<>{sec('debate','DEBATES')}{sec('thinkalong','THINK-ALONGS')}</>}<button className="new-button" onClick={onNew}>Start a debate</button></section>
