@@ -75,22 +75,29 @@ async function groq(topic:string,key:string,c:string,style:string,model?:string)
 const NAMES=/^\s*(Dr\.\s*)?(Kavya Sharma|Rajan Mehta|Neha Joshi|Arjun Das|Priya Rao|Leela Sen|Vikram Singh|Kabir Shah)\s*[:\-\u2013]\s*/i;
 function clean(o:any){if(Array.isArray(o?.statements))o.statements=o.statements.map((x:any)=>String(x).replace(NAMES,'').replace(/^["\u201c]|["\u201d]$/g,'').trim());return o}
 function onTopic(o:any,topic:string){const words=topic.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w.length>3&&!['should','would','could','about','their','there','which','these','those','have','does','will'].includes(w)).map(w=>w.slice(0,5));if(!words.length)return true;const hit=o.statements.filter((t:string)=>words.some(w=>t.toLowerCase().includes(w))).length;const longest=Math.max(...o.statements.map((t:string)=>t.split(/\s+/).length));const drift=!/\b(ai|agi|artificial)\b/i.test(topic)&&o.statements.some((t:string)=>/\bAGI\b/.test(t));return hit>=3&&longest<=70&&!drift}
+const CACHE=new Map<string,{t:number;body:any}>();
 export async function POST(req:Request){
  const {topic,style:st}=await req.json();const style=typeof st==='string'&&st in STYLES?st:'balanced';
  if(typeof topic!=='string'||!topic.trim()||topic.length>200) return NextResponse.json({error:'bad topic'},{status:400});
+ const ck=style+'|'+topic.trim().toLowerCase();const hit=CACHE.get(ck);if(hit&&Date.now()-hit.t<600000)return NextResponse.json(hit.body);
  const [web,pap]=await Promise.all([research(topic),papers(topic)]);const sources=[...web,...pap];const c=ctx(sources);
  const attempts:[string,()=>Promise<any>][]=[];
  if(process.env.GEMINI_API_KEY) attempts.push(['gemini',()=>gemini(topic,process.env.GEMINI_API_KEY!,c,style)]);
  if(process.env.GEMINI_API_KEY) attempts.push(['gemini-lite',()=>gemini(topic,process.env.GEMINI_API_KEY!,c,style,'gemini-3.1-flash-lite')]);
+ if(process.env.GEMINI_API_KEY) attempts.push(['gemini-gemini-3.5-flash-lite',()=>gemini(topic,process.env.GEMINI_API_KEY!,c,style,'gemini-3.5-flash-lite')]);
+ if(process.env.GEMINI_API_KEY) attempts.push(['gemini-gemini-3.7-flash',()=>gemini(topic,process.env.GEMINI_API_KEY!,c,style,'gemini-3.7-flash')]);
+ if(process.env.GEMINI_API_KEY) attempts.push(['gemini-gemini-3.6-flash',()=>gemini(topic,process.env.GEMINI_API_KEY!,c,style,'gemini-3.6-flash')]);
+ if(process.env.GEMINI_API_KEY) attempts.push(['gemini-gemini-flash-latest',()=>gemini(topic,process.env.GEMINI_API_KEY!,c,style,'gemini-flash-latest')]);
+ if(process.env.GEMINI_API_KEY) attempts.push(['gemini-gemini-3-flash-preview',()=>gemini(topic,process.env.GEMINI_API_KEY!,c,style,'gemini-3-flash-preview')]);
  if(process.env.GROQ_API_KEY) attempts.push(['groq',()=>groq(topic,process.env.GROQ_API_KEY!,c,style)]);
  if(process.env.GROQ_API_KEY) attempts.push(['groq-20b',()=>groq(topic,process.env.GROQ_API_KEY!,c,style,'openai/gpt-oss-20b')]);
  for(const [source,fn] of attempts){
   for(let t=0;t<2;t++){
    try{const o=clean(await fn());
     const ok=Array.isArray(o?.statements)&&o.statements.length===8&&['A','B'].includes(o.winner);
-    if(ok&&onTopic(o,topic)) return NextResponse.json({source,...o,cites:cites(o.statements,sources),sources:sources.map(({title,url})=>({title,url}))});
+    if(ok&&onTopic(o,topic)){const body={source,...o,cites:cites(o.statements,sources),sources:sources.map(({title,url})=>({title,url}))};CACHE.set(ck,{t:Date.now(),body});return NextResponse.json(body)}
     console.error('llm rejected',source,t,ok?'off-topic':'bad shape',JSON.stringify(o?.statements||o).slice(0,500));
-   }catch(e){console.error('llm fail',source,t,String(e).slice(0,160))}
+   }catch(e){console.error('llm fail',source,t,String(e).slice(0,160));if(/ (429|503)/.test(String(e)))break}
   }
  }
  return NextResponse.json({source:'mock',sources:sources.map(({title,url})=>({title,url}))},{status:200});
