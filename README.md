@@ -50,6 +50,7 @@ Env vars (all optional for a demo run):
 |---|---|
 | `GEMINI_API_KEY` | primary debate engine (Google AI Studio free key) |
 | `GROQ_API_KEY` | fallback engine |
+| `TAVILY_API_KEY` | web research that grounds the debate (free tier) |
 | `ORACLE_PRIVATE_KEY` | contract owner key, used server-side only by `/api/resolve` to settle pools |
 | `NEXT_PUBLIC_THEBATE_ADDRESS` | contract address (defaults to the deployed one) |
 

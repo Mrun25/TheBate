@@ -1,0 +1,5 @@
+.deployer.key
+.env*
+node_modules
+.next
+tests/*.png
