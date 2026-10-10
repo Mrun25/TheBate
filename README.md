@@ -8,6 +8,8 @@ Live on Monad Testnet - built for Monad Blitz Pune V3
 
 [**Live app**](https://thebate-three.vercel.app) · [**Watch the demo**](https://thebate-three.vercel.app/debate/demo?demo=1&topic=Has%20AI%20achieved%20AGI%3F) · [**Contract**](https://testnet.monadvision.com/address/0x6e06e99cc6f4bb56cc10927483d72667b5f0d20c) · [**Repo**](https://github.com/Mrun25/TheBate)
 
+**Demo video (90s, narrated):** [docs/thebate-demo.mp4](docs/thebate-demo.mp4)
+
 ![lobby](docs/lobby.png)
 
 </div>
