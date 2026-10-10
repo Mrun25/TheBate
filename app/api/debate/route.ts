@@ -14,12 +14,12 @@ function ctx(src:{title:string;snippet:string}[]){return src.length?'\nBackgroun
 async function gemini(topic:string,key:string,c:string){
  const model=process.env.GEMINI_MODEL||'gemini-2.5-flash';
  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,{method:'POST',headers:{'content-type':'application/json','x-goog-api-key':key},body:JSON.stringify({systemInstruction:{parts:[{text:SYS}]},contents:[{role:'user',parts:[{text:`Motion: ${topic}${c}`}]}],generationConfig:{responseMimeType:'application/json',temperature:0.8}})});
- if(!r.ok) throw new Error('gemini '+r.status);
+ if(!r.ok) throw new Error('gemini '+r.status+' '+(await r.text()).slice(0,160));
  const j=await r.json();return JSON.parse(j.candidates[0].content.parts[0].text);
 }
 async function groq(topic:string,key:string,c:string){
  const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+key},body:JSON.stringify({model:process.env.GROQ_MODEL||'openai/gpt-oss-120b',reasoning_effort:'low',max_tokens:1800,temperature:0.7,response_format:{type:'json_object'},messages:[{role:'system',content:SYS},{role:'user',content:`Motion: ${topic}${c}`}]})});
- if(!r.ok) throw new Error('groq '+r.status);
+ if(!r.ok) throw new Error('groq '+r.status+' '+(await r.text()).slice(0,200));
  const j=await r.json();return JSON.parse(j.choices[0].message.content.replace(/<think>[\s\S]*?<\/think>/g,''));
 }
 export async function POST(req:Request){
@@ -32,7 +32,8 @@ export async function POST(req:Request){
  for(const [source,fn] of attempts){
   try{const o=await fn();
    if(Array.isArray(o.statements)&&o.statements.length===8&&['A','B'].includes(o.winner)) return NextResponse.json({source,...o,sources:sources.map(({title,url})=>({title,url}))});
-  }catch{}
+   console.error('llm bad shape',source,JSON.stringify(o).slice(0,300));
+  }catch(e){console.error('llm fail',source,String(e).slice(0,200))}
  }
  return NextResponse.json({source:'mock'},{status:200});
 }

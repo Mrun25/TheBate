@@ -4,7 +4,7 @@ Ten AI minds debate a question in a pixel-art clubhouse. A judge picks a winner.
 
 Built for Monad Blitz Pune. Fresh code, started on the day of the event.
 
-- Live app: LIVE_URL_PLACEHOLDER
+- Live app: https://thebate-three.vercel.app
 - Contract (Monad Testnet, chain ID 10143): `0x6e06e99cc6f4bb56cc10927483d72667b5f0d20c`
   - Explorer: https://testnet.monadvision.com/address/0x6e06e99cc6f4bb56cc10927483d72667b5f0d20c
   - Deploy tx: `0xb967e75befca9ef84f189787cd87b944b16042d284cad39e885d52da4bdea1c7`
