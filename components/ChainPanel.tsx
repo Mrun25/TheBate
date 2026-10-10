@@ -11,7 +11,19 @@ function friendly(e:any):string{
  if(/timeout|timed out|fetch|network|HTTP request failed/i.test(m)) return 'The network is slow right now. Your transaction may still land - check the pool in a few seconds.';
  return m.slice(0,140)||'Something went wrong. Please retry.';
 }
-export default function ChainPanel({topic,verdict,winner}:{topic:string;verdict:boolean;winner:'A'|'B'}){
+export default function ChainPanel({topic,verdict,winner,demo}:{topic:string;verdict:boolean;winner:'A'|'B';demo?:boolean}){
+ if(demo) return <DemoPool verdict={verdict} winner={winner}/>
+ return <LivePool topic={topic} verdict={verdict} winner={winner}/>}
+function DemoPool({verdict,winner}:{verdict:boolean;winner:'A'|'B'}){
+ const [open,setOpen]=useState(false),[a,setA]=useState(0),[b,setB]=useState(0),[res,setRes]=useState(false),[claimed,setClaimed]=useState(false);
+ const won=winner==='A'?a:b,tot=a+b;
+ return <div className="chain-panel"><div className="chain-head"><b>PREDICTION POOL · SIMULATED DEMO</b><a href={`${EXPLORER}/address/${CONTRACT}`} target="_blank" rel="noreferrer">real contract {CONTRACT.slice(0,8)}…{CONTRACT.slice(-6)}</a></div>
+  <p className="chain-note">Nothing here touches a wallet or the chain. It mimics the real flow so you can see how it works. Run a live debate to use the real contract on Monad Testnet.</p>
+  {!open?<button className="new-button" onClick={()=>setOpen(true)}>Open pool (simulated)</button>:<><p>Team A <b className="ca">{a} MON</b> vs Team B <b className="cb">{b} MON</b>{res&&<> · Team {winner} won</>}</p>
+  {!res&&<div className="chain-row"><button className="outline" onClick={()=>setA(a+0.05)}>Stake Team A +0.05</button><button className="outline" onClick={()=>setB(b+0.05)}>Stake Team B +0.05</button>{verdict?<button className="wildcard" onClick={()=>setRes(true)}>Settle (judge: Team {winner})</button>:<span className="chain-hint">Settle unlocks when the verdict is in.</span>}</div>}
+  {res&&!claimed&&<button className="wildcard" onClick={()=>setClaimed(true)}>Claim winnings</button>}
+  {claimed&&<p className="cg">Winners split the pot: {(tot*0.95).toFixed(3)} MON paid out, {(tot*0.05).toFixed(3)} MON protocol cut (simulated). {won===0&&'Stake on the winning side to see a payout.'}</p>}</>}</div>}
+function LivePool({topic,verdict,winner}:{topic:string;verdict:boolean;winner:'A'|'B'}){
  const [acct,setAcct]=useState<any>(null),[id,setId]=useState<bigint|null>(null),[d,setD]=useState<D|null>(null),[amt,setAmt]=useState('0.05'),[busy,setBusy]=useState(''),[msg,setMsg]=useState(''),[tx,setTx]=useState(''),[readErr,setReadErr]=useState(false),[noWallet,setNoWallet]=useState(false),[host,setHost]=useState('');
  useEffect(()=>{setHost(location.host);setNoWallet(!(window as any).ethereum)},[]);
  useEffect(()=>{try{const s=localStorage.getItem('thebate-debate:'+topic);setId(s?BigInt(s):null);setD(null)}catch{}},[topic]);
@@ -28,7 +40,7 @@ export default function ChainPanel({topic,verdict,winner}:{topic:string;verdict:
   <div className="chain-head"><b>PREDICTION POOL · MONAD TESTNET</b><a href={`${EXPLORER}/address/${CONTRACT}`} target="_blank" rel="noreferrer">{CONTRACT.slice(0,8)}…{CONTRACT.slice(-6)}</a></div>
   {noWallet&&<p className="chain-note">No wallet detected in this browser. You can still read the pool and the verified contract. To stake, open this page inside a wallet app browser (<a href={mm} target="_blank" rel="noreferrer">open in MetaMask</a>) or install MetaMask, Rabby or Phantom on desktop. Free testnet MON: <a href="https://faucet.monad.xyz" target="_blank" rel="noreferrer">faucet.monad.xyz</a>.</p>}
   {id===null?<><p>Open an on-chain pool for this debate (0.1 MON). The audience then stakes MON on a side. Winners split the pot, 5% protocol cut.</p><button className="new-button" disabled={!!busy||noWallet} onClick={create}>{busy==='create'?'Confirm in wallet…':noWallet?'Wallet needed to open a pool':'Open pool · 0.1 MON'}</button></>:
-  <><p>Pool #{String(id)} · Team A <b className="ca">{pa} MON</b> vs Team B <b className="cb">{pb} MON</b>{d?.resolved&&<> · {d.voided?'VOID (refunds)':`Team ${d.winner===0?'A':'B'} won`}</>}</p>
+  <><p>Pool #{String(id)} · Team A <b className="ca">{d?`${pa} MON`:'…'}</b> vs Team B <b className="cb">{d?`${pb} MON`:'…'}</b>{d?.resolved&&<> · {d.voided?'VOID (refunds)':`Team ${d.winner===0?'A':'B'} won`}</>}</p>
   {readErr&&<p className="chain-warn">Live pool data is slow to load. Showing the last known values; retrying every few seconds.</p>}
   {!d?.resolved&&<div className="chain-row"><input value={amt} inputMode="decimal" onChange={e=>setAmt(e.target.value)} aria-label="Stake amount in MON"/><span>MON</span><button className="outline" disabled={!!busy||noWallet} onClick={()=>stake(0)}>{busy==='stake0'?'Confirm…':'Stake Team A'}</button><button className="outline" disabled={!!busy||noWallet} onClick={()=>stake(1)}>{busy==='stake1'?'Confirm…':'Stake Team B'}</button>{verdict?<button className="wildcard" disabled={!!busy} onClick={resolve}>{busy==='resolve'?'Settling…':`Settle (judge: Team ${winner})`}</button>:<span className="chain-hint">Settle unlocks when the verdict is in.</span>}</div>}
   {d?.resolved&&<button className="wildcard" disabled={!!busy||noWallet} onClick={claim}>{busy==='claim'?'Confirm…':'Claim winnings'}</button>}</>}

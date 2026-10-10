@@ -35,5 +35,5 @@ export async function POST(req:Request){
    console.error('llm bad shape',source,JSON.stringify(o).slice(0,300));
   }catch(e){console.error('llm fail',source,String(e).slice(0,200))}
  }
- return NextResponse.json({source:'mock'},{status:200});
+ return NextResponse.json({source:'mock',sources:sources.map(({title,url})=>({title,url}))},{status:200});
 }
