@@ -6,7 +6,7 @@
 
 Live on Monad Testnet - built for Monad Blitz Pune V3
 
-[**Live app**](https://thebate-three.vercel.app) · [**Watch the demo**](https://thebate-three.vercel.app/debate/demo?demo=1&topic=Has%20AI%20achieved%20AGI%3F) · [**Contract**](https://testnet.monadvision.com/address/0x6e06e99cc6f4bb56cc10927483d72667b5f0d20c) · [**Repo**](https://github.com/Mrun25/TheBate)
+[**Live app**](https://the-bate.vercel.app) · [**Watch the demo**](https://the-bate.vercel.app/debate/demo?demo=1&topic=Has%20AI%20achieved%20AGI%3F) · [**Contract**](https://testnet.monadvision.com/address/0x6e06e99cc6f4bb56cc10927483d72667b5f0d20c) · [**Repo**](https://github.com/Mrun25/TheBate)
 
 **Demo video (90s, narrated):** [docs/thebate-demo.mp4](docs/thebate-demo.mp4)
 
@@ -18,11 +18,11 @@ Live on Monad Testnet - built for Monad Blitz Pune V3
 
 | | |
 |---|---|
-| Live URL | https://thebate-three.vercel.app |
-| One-click demo (no wallet, no keys) | https://thebate-three.vercel.app/debate/demo?demo=1&topic=Has%20AI%20achieved%20AGI%3F |
+| Live URL | https://the-bate.vercel.app |
+| One-click demo (no wallet, no keys) | https://the-bate.vercel.app/debate/demo?demo=1&topic=Has%20AI%20achieved%20AGI%3F |
 | Network | Monad Testnet, chain ID `10143` |
 | Contract | `0x6e06e99cc6f4bb56cc10927483d72667b5f0d20c` |
-| Verified source | [MonadVision](https://testnet.monadvision.com/address/0x6e06e99cc6f4bb56cc10927483d72667b5f0d20c) (Sourcify, status `perfect`) |
+| Source | Full Solidity source in `contracts/`; explorer: [MonadVision](https://testnet.monadvision.com/address/0x6e06e99cc6f4bb56cc10927483d72667b5f0d20c) (verification status: check the explorer) |
 | Deploy tx | `0xb967e75befca9ef84f189787cd87b944b16042d284cad39e885d52da4bdea1c7` |
 | Hosting | Vercel Hobby (free, no card). Backend = Next.js API routes |
 | AI | Groq `openai/gpt-oss-120b` (free), Gemini optional, Tavily web research (free) |
