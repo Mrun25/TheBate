@@ -38,6 +38,16 @@ Live on Monad Testnet - built for Monad Blitz Pune V3
 
 ![arena](docs/verdict.png)
 
+## Team
+
+Built at Monad Blitz Pune V3.
+
+| Member | Work |
+|---|---|
+| **Mrunmayee Daware** | Next.js app and UX design, AI debate engine (Gemini and Groq chain, Tavily and arXiv research, per-statement sources), community feed, demo mode, deployment |
+| **Hassan Rehman** | Solidity prediction-pool contract, on-chain integration (staking, settlement, claims), Monad testnet deployment and transaction testing |
+| **Tanishq** | Team member |
+
 ## Architecture
 
 ```mermaid
