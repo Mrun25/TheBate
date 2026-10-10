@@ -1,4 +1,5 @@
 import {NextResponse} from 'next/server';
+import {signVerdict} from '@/lib/verdict';
 export const runtime='nodejs';
 export const maxDuration=60;
 const PERSONAS=`Speakers in order (statement number: persona and how they talk):
@@ -95,7 +96,7 @@ export async function POST(req:Request){
   for(let t=0;t<2;t++){
    try{const o=clean(await fn());
     const ok=Array.isArray(o?.statements)&&o.statements.length===8&&['A','B'].includes(o.winner);
-    if(ok&&onTopic(o,topic)){const body={source,...o,cites:cites(o.statements,sources),sources:sources.map(({title,url})=>({title,url}))};CACHE.set(ck,{t:Date.now(),body});return NextResponse.json(body)}
+    if(ok&&onTopic(o,topic)){const body={source,...o,vt:signVerdict(topic,o.winner==='A'?0:1),cites:cites(o.statements,sources),sources:sources.map(({title,url})=>({title,url}))};CACHE.set(ck,{t:Date.now(),body});return NextResponse.json(body)}
     console.error('llm rejected',source,t,ok?'off-topic':'bad shape',JSON.stringify(o?.statements||o).slice(0,500));
    }catch(e){console.error('llm fail',source,t,String(e).slice(0,160));if(/ (429|503)/.test(String(e)))break}
   }

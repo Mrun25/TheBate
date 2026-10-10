@@ -11,9 +11,9 @@ function friendly(e:any):string{
  if(/timeout|timed out|fetch|network|HTTP request failed/i.test(m)) return 'The network is slow right now. Your transaction may still land - check the pool in a few seconds.';
  return m.slice(0,140)||'Something went wrong. Please retry.';
 }
-export default function ChainPanel({topic,verdict,winner,demo}:{topic:string;verdict:boolean;winner:'A'|'B';demo?:boolean}){
+export default function ChainPanel({topic,verdict,winner,demo,vt}:{vt?:string;topic:string;verdict:boolean;winner:'A'|'B';demo?:boolean}){
  if(demo) return <DemoPool verdict={verdict} winner={winner}/>
- return <LivePool topic={topic} verdict={verdict} winner={winner}/>}
+ return <LivePool vt={vt} topic={topic} verdict={verdict} winner={winner}/>}
 function DemoPool({verdict,winner}:{verdict:boolean;winner:'A'|'B'}){
  const [open,setOpen]=useState(false),[a,setA]=useState(0),[b,setB]=useState(0),[res,setRes]=useState(false),[claimed,setClaimed]=useState(false);
  const won=winner==='A'?a:b,tot=a+b;
@@ -23,7 +23,7 @@ function DemoPool({verdict,winner}:{verdict:boolean;winner:'A'|'B'}){
   {!res&&<div className="chain-row"><button className="outline" onClick={()=>setA(a+0.05)}>Stake Team A +0.05</button><button className="outline" onClick={()=>setB(b+0.05)}>Stake Team B +0.05</button>{verdict?<button className="wildcard" onClick={()=>setRes(true)}>Settle (judge: Team {winner})</button>:<span className="chain-hint">Settle unlocks when the verdict is in.</span>}</div>}
   {res&&!claimed&&<button className="wildcard" onClick={()=>setClaimed(true)}>Claim winnings</button>}
   {claimed&&<p className="cg">Winners split the pot: {(tot*0.95).toFixed(3)} MON paid out, {(tot*0.05).toFixed(3)} MON protocol cut (simulated). {won===0&&'Stake on the winning side to see a payout.'}</p>}</>}</div>}
-function LivePool({topic,verdict,winner}:{topic:string;verdict:boolean;winner:'A'|'B'}){
+function LivePool({topic,verdict,winner,vt}:{vt?:string;topic:string;verdict:boolean;winner:'A'|'B'}){
  const [acct,setAcct]=useState<any>(null),[id,setId]=useState<bigint|null>(null),[d,setD]=useState<D|null>(null),[amt,setAmt]=useState('0.05'),[busy,setBusy]=useState(''),[msg,setMsg]=useState(''),[tx,setTx]=useState(''),[readErr,setReadErr]=useState(false),[noWallet,setNoWallet]=useState(false),[host,setHost]=useState('');
  useEffect(()=>{setHost(location.host);setNoWallet(!(window as any).ethereum)},[]);
  useEffect(()=>{try{const s=localStorage.getItem('thebate-debate:'+topic);setId(s?BigInt(s):null);setD(null)}catch{}},[topic]);
@@ -32,7 +32,7 @@ function LivePool({topic,verdict,winner}:{topic:string;verdict:boolean;winner:'A
  async function ensure(){if(acct)return acct;const a=await connect();setAcct(a);return a}
  const create=()=>run('create',async()=>{const a=await ensure();const h=await a.wallet.writeContract({address:CONTRACT,abi:THEBATE_ABI,functionName:'createDebate',args:[topic],value:parseEther('0.1'),gas:250000n});const r=await publicClient.waitForTransactionReceipt({hash:h,timeout:60000});const n=await publicClient.readContract({address:CONTRACT,abi:THEBATE_ABI,functionName:'debateCount'}) as bigint;const log=r.logs[0];const nid=log?.topics[1]?BigInt(log.topics[1]):n;setId(nid);localStorage.setItem('thebate-debate:'+topic,String(nid));setTx(h);return undefined});
  const stake=(side:0|1)=>run('stake'+side,async()=>{const a=await ensure();return a.wallet.writeContract({address:CONTRACT,abi:THEBATE_ABI,functionName:'stake',args:[id!,side],value:parseEther(amt||'0'),gas:250000n})});
- const resolve=()=>run('resolve',async()=>{const r=await fetch('/api/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:String(id),winner:winner==='A'?0:1})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Settlement service is busy. Retry in a moment.');setTx(j.hash);return undefined});
+ const resolve=()=>run('resolve',async()=>{const r=await fetch('/api/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:String(id),winner:winner==='A'?0:1,vt:vt||undefined})});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Settlement service is busy. Retry in a moment.');setTx(j.hash);return undefined});
  const claim=()=>run('claim',async()=>{const a=await ensure();return a.wallet.writeContract({address:CONTRACT,abi:THEBATE_ABI,functionName:'claim',args:[id!],gas:250000n})});
  const pa=d?Number(formatEther(d.poolA)):0,pb=d?Number(formatEther(d.poolB)):0;
  const mm=host?`https://metamask.app.link/dapp/${host}`:'https://metamask.io/download/';
