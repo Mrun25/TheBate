@@ -50,3 +50,18 @@
 .style-options{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0 14px}
 .style-options button{padding:8px 14px;border:1px solid #44324f;color:#bda4cc;font-size:12px;min-height:38px}
 .style-options button.chosen{border-color:#FFD54F;color:#FFD54F;background:#1d1830}
+
+/* pixel polish: additive, reversible */
+button,.icon-button,.begin{transition:transform .12s steps(3),box-shadow .12s steps(3),background-color .12s steps(3)}
+button:not(:disabled):hover{transform:translateY(-2px);box-shadow:0 3px 0 rgba(0,0,0,.55)}
+button:not(:disabled):active{transform:translateY(1px);box-shadow:none}
+.begin:not(:disabled){box-shadow:0 4px 0 rgba(0,0,0,.5)}
+.statement{animation:px-in .35s steps(5) both}
+@keyframes px-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.decision{letter-spacing:.08em;text-shadow:1px 1px 0 rgba(0,0,0,.6)}
+.cursor{animation:px-blink 1s steps(2) infinite}
+@keyframes px-blink{50%{opacity:0}}
+.bottombar button.active svg{animation:px-bob 1.2s steps(2) infinite}
+@keyframes px-bob{50%{transform:translateY(-2px)}}
+a.cite{image-rendering:pixelated;border-left:2px solid #4FC3F7;padding-left:8px}
+@media (prefers-reduced-motion:reduce){.statement,.cursor,.bottombar button.active svg{animation:none}button{transition:none}}
