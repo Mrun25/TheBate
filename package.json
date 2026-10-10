@@ -1,0 +1,37 @@
+{
+  "name": "thebate-v2",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "compile": "node scripts/compile.cjs",
+    "deploy": "node scripts/deploy.mjs deploy"
+  },
+  "dependencies": {
+    "@fontsource/ibm-plex-mono": "^5.3.0",
+    "@fontsource/press-start-2p": "^5.3.0",
+    "@fontsource/space-grotesk": "^5.3.0",
+    "eventemitter3": "^5.0.1",
+    "framer-motion": "^11.18.2",
+    "lucide-react": "^0.468.0",
+    "next": "14.2.35",
+    "phaser": "^3.90.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "viem": "^2.57.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "autoprefixer": "^10.4.20",
+    "playwright": "^1.51.0",
+    "postcss": "^8.5.1",
+    "solc": "^0.8.26",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.3"
+  }
+}

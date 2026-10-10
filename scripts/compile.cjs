@@ -1,0 +1,10 @@
+const solc=require('solc'),fs=require('fs');
+const src=fs.readFileSync('contracts/TheBate.sol','utf8');
+const out=JSON.parse(solc.compile(JSON.stringify({language:'Solidity',sources:{'TheBate.sol':{content:src}},settings:{optimizer:{enabled:true,runs:200},evmVersion:'cancun',outputSelection:{'*':{'*':['abi','evm.bytecode.object']}}}})));
+(out.errors||[]).forEach(e=>console.log(e.formattedMessage));
+if((out.errors||[]).some(e=>e.severity==='error'))process.exit(1);
+const c=out.contracts['TheBate.sol'].TheBate;
+fs.mkdirSync('artifacts',{recursive:true});
+fs.writeFileSync('artifacts/TheBate.json',JSON.stringify({abi:c.abi,bytecode:'0x'+c.evm.bytecode.object},null,1));
+fs.writeFileSync('lib/abi.ts','export const THEBATE_ABI = '+JSON.stringify(c.abi)+' as const;\n');
+console.log('ok');

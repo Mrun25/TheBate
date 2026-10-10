@@ -1,0 +1,23 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {CONTRACT,EXPLORER,THEBATE_ABI,connect,formatEther,parseEther,publicClient,readDebate} from '@/lib/chain';
+type D=Awaited<ReturnType<typeof readDebate>>;
+export default function ChainPanel({topic,verdict,winner}:{topic:string;verdict:boolean;winner:'A'|'B'}){
+ const [acct,setAcct]=useState<any>(null),[id,setId]=useState<bigint|null>(null),[d,setD]=useState<D|null>(null),[amt,setAmt]=useState('0.05'),[busy,setBusy]=useState(''),[msg,setMsg]=useState(''),[tx,setTx]=useState('');
+ useEffect(()=>{try{const s=localStorage.getItem('thebate-debate:'+topic);setId(s?BigInt(s):null);setD(null)}catch{}},[topic]);
+ useEffect(()=>{if(id===null)return;let on=true;const f=()=>readDebate(id).then(x=>on&&setD(x)).catch(()=>{});f();const t=setInterval(f,5000);return()=>{on=false;clearInterval(t)}},[id]);
+ async function run(label:string,fn:()=>Promise<`0x${string}`|void>){setBusy(label);setMsg('');try{const h=await fn();if(h){setTx(h);await publicClient.waitForTransactionReceipt({hash:h});}if(id!==null)setD(await readDebate(id))}catch(e:any){setMsg((e?.shortMessage||e?.message||'failed').slice(0,160))}setBusy('')}
+ async function ensure(){if(acct)return acct;const a=await connect();setAcct(a);return a}
+ const create=()=>run('create',async()=>{const a=await ensure();const h=await a.wallet.writeContract({address:CONTRACT,abi:THEBATE_ABI,functionName:'createDebate',args:[topic],value:parseEther('0.1'),gas:250000n});const r=await publicClient.waitForTransactionReceipt({hash:h});const n=await publicClient.readContract({address:CONTRACT,abi:THEBATE_ABI,functionName:'debateCount'}) as bigint;const log=r.logs[0];const nid=log?.topics[1]?BigInt(log.topics[1]):n;setId(nid);localStorage.setItem('thebate-debate:'+topic,String(nid));setTx(h);return undefined});
+ const stake=(side:0|1)=>run('stake'+side,async()=>{const a=await ensure();return a.wallet.writeContract({address:CONTRACT,abi:THEBATE_ABI,functionName:'stake',args:[id!,side],value:parseEther(amt||'0'),gas:250000n})});
+ const resolve=()=>run('resolve',async()=>{const r=await fetch('/api/resolve',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({id:String(id),winner:winner==='A'?0:1})});const j=await r.json();if(!r.ok)throw new Error(j.error||'resolve failed');setTx(j.hash);return undefined});
+ const claim=()=>run('claim',async()=>{const a=await ensure();return a.wallet.writeContract({address:CONTRACT,abi:THEBATE_ABI,functionName:'claim',args:[id!],gas:250000n})});
+ const pa=d?Number(formatEther(d.poolA)):0,pb=d?Number(formatEther(d.poolB)):0;
+ return <div className="chain-panel" style={{border:'2px solid #FFD54F',background:'#13132a',padding:12,margin:'0 0 12px',fontFamily:'IBM Plex Mono, monospace',fontSize:12}}>
+  <div style={{display:'flex',justifyContent:'space-between',gap:8,flexWrap:'wrap'}}><b style={{color:'#FFD54F'}}>PREDICTION POOL · MONAD TESTNET</b><a href={`${EXPLORER}/address/${CONTRACT}`} target="_blank" rel="noreferrer" style={{color:'#4FC3F7'}}>{CONTRACT.slice(0,8)}…{CONTRACT.slice(-6)}</a></div>
+  {id===null?<><p style={{margin:'8px 0'}}>Open an on-chain pool for this debate (0.1 MON), then the audience stakes MON on a side. Winners split the pot, 5% protocol cut.</p><button className="new-button" disabled={!!busy} onClick={create}>{busy==='create'?'Confirm in wallet…':'Open pool · 0.1 MON'}</button></>:
+  <><p style={{margin:'8px 0'}}>Pool #{String(id)} · Team A <b style={{color:'#4fc3f7'}}>{pa} MON</b> vs Team B <b style={{color:'#ff7043'}}>{pb} MON</b>{d?.resolved&&<> · {d.voided?'VOID (refunds)':`Team ${d.winner===0?'A':'B'} won`}</>}</p>
+  {!d?.resolved&&<div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}><input value={amt} onChange={e=>setAmt(e.target.value)} aria-label="Stake amount in MON" style={{width:70,background:'#0D0D1A',color:'#fff',border:'1px solid #555',padding:'4px 6px'}}/><span>MON</span><button className="outline" disabled={!!busy} onClick={()=>stake(0)}>{busy==='stake0'?'…':'Stake Team A'}</button><button className="outline" disabled={!!busy} onClick={()=>stake(1)}>{busy==='stake1'?'…':'Stake Team B'}</button>{verdict&&<button className="wildcard" disabled={!!busy} onClick={resolve}>{busy==='resolve'?'…':`Settle (judge: Team ${winner})`}</button>}</div>}
+  {d?.resolved&&<button className="wildcard" disabled={!!busy} onClick={claim}>{busy==='claim'?'…':'Claim winnings'}</button>}</>}
+  {tx&&<p style={{margin:'8px 0 0'}}>Last tx: <a href={`${EXPLORER}/tx/${tx}`} target="_blank" rel="noreferrer" style={{color:'#69F0AE'}}>{tx.slice(0,12)}…</a></p>}
+  {msg&&<p style={{color:'#ff7043',margin:'6px 0 0'}}>{msg}</p>}</div>}
