@@ -25,7 +25,7 @@ Live on Monad Testnet - built for Monad Blitz Pune V3
 | Source | Full Solidity source in `contracts/`; explorer: [MonadVision](https://testnet.monadvision.com/address/0x6e06e99cc6f4bb56cc10927483d72667b5f0d20c) (verification status: check the explorer) |
 | Deploy tx | `0xb967e75befca9ef84f189787cd87b944b16042d284cad39e885d52da4bdea1c7` |
 | Hosting | Vercel Hobby (free, no card). Backend = Next.js API routes |
-| AI | Groq `openai/gpt-oss-120b` (free), Gemini optional, Tavily web research (free) |
+| AI | Gemini 3.5 Flash primary, Groq `gpt-oss-120b`/`20b` fallback (all free), Tavily web research (free) |
 | Rules | Fresh code written on event day. No pre-existing project code |
 
 ## How it works
@@ -79,9 +79,9 @@ sequenceDiagram
 | If this fails | The app does this |
 |---|---|
 | Tavily research fails | Debate runs without web sources; the verdict panel shows no research links |
-| Groq `gpt-oss-120b` rate limit or error | Falls back to Groq `gpt-oss-20b` (free) |
-| Both Groq models fail | Falls back to Gemini (if a key is set), then to a clearly labelled offline script. The footer shows which engine ran |
-| Viewer questions (`/api/ask`) | Tavily-grounded answer via Groq, then Gemini, then research snippets |
+| Gemini 3.5 Flash (primary) busy or error | Retries, then Gemini 3.1 Flash-Lite, then Groq `gpt-oss-120b`, then Groq `gpt-oss-20b` (all free tiers) |
+| Every model fails | Clearly labelled offline script. The footer shows which engine ran |
+| Viewer questions (`/api/ask`) | Tavily-grounded answer via Gemini, then Groq, then research snippets |
 | Community feed (`/community`) | Vercel Blob store; if unreachable the page shows an empty state, debates still work |
 | Watch demo (`/debate/demo?demo=1`) | Fully scripted, no API calls, so it works with every provider down |
 | Tavily unavailable | Debate still runs, without research links |
@@ -121,7 +121,7 @@ sequenceDiagram
 ```
 app/
   [[...slug]]/page.tsx     single-page shell for all routes
-  api/debate/route.ts      Tavily research -> Groq -> Gemini -> offline fallback
+  api/debate/route.ts      Tavily research -> Gemini -> Groq -> offline fallback
   api/resolve/route.ts     server-side judge oracle (owner key from env)
   error.tsx, not-found.tsx graceful failure pages
   globals.css              all styling, mobile breakpoints
