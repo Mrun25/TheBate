@@ -92,7 +92,6 @@ components/
   World.tsx                Phaser pixel-art scenes
   Community.tsx            community feed
 lib/
-  verdict.ts               verdict signing helper
   bridge.ts, data.ts       UI event bus and sample data
   offline.ts, store.ts     offline script and community store
 tests/                     UI tests (Playwright)
