@@ -13,7 +13,7 @@ export function sfx(k:'click'|'a'|'b'|'win'|'coin'|'wild'){
 }
 export function SfxEngine({on,count,verdict,running}:{on:boolean;count:number;verdict:boolean;running:boolean}){
  const onRef=useRef(on);onRef.current=on;
- useEffect(()=>{const h=(e:MouseEvent)=>{if(!onRef.current)return;const el=(e.target as HTMLElement)?.closest?.('button,a,[role=button]') as HTMLElement|null;if(!el)return;const tx=(el.textContent||'').toLowerCase();sfx(/stake|claim|pool|settle/.test(tx)?'coin':'click')};document.addEventListener('click',h,true);return()=>document.removeEventListener('click',h,true)},[]);
+ useEffect(()=>{const h=(e:MouseEvent)=>{if(!onRef.current)return;const el=(e.target as HTMLElement)?.closest?.('button,a,[role=button]') as HTMLElement|null;if(!el)return;sfx('click')};document.addEventListener('click',h,true);return()=>document.removeEventListener('click',h,true)},[]);
  useEffect(()=>{if(on&&running&&!verdict&&count>1)sfx(count%2===0?'b':'a')},[count]);
  useEffect(()=>{if(on&&verdict)sfx('win')},[verdict]);
  return null}
