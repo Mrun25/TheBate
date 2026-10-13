@@ -248,3 +248,7 @@ node tests/interactions.cjs                                                # UI 
 ## Privacy and security
 
 No secrets in the repo or its history. Keys live in Vercel env vars. The oracle key is only read server side.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
