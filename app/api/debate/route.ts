@@ -1,4 +1,6 @@
 import {NextResponse} from 'next/server';
+import {rankGoodFirst,goodSrc,kw,cites,clean,onTopic,runChain} from '@/lib/debate-utils';
+import {rateLimit,clientIp} from '@/lib/ratelimit';
 export const runtime='nodejs';
 export const maxDuration=60;
 const PERSONAS=`Speakers in order (statement number: persona and how they talk):
@@ -30,20 +32,15 @@ Hard rules:
 - Banned phrases: "it's important to note", "in conclusion", "delve", "landscape", "tapestry", "multifaceted", "at the end of the day", "double-edged sword", "game-changer", "nuanced".
 ${STYLES[style]||STYLES.balanced}
 Then act as an impartial judge: pick the winner by argument quality, scores 0-100 (winner higher), reasoning max 35 words in a natural voice, strongest = one real quote copied from the winning side.`}
-const BAD=['mypaperhelp','studymode','123helpme','grademiners','paperap','essaytyper','bartleby','coursehero','brainly','chegg','scribd','studocu','ukessays','essaypro','writemyessay','samplius','ipl.org','gradesfixer','phdessay','edubirdie','essayshark','papersowl','bookrags','cliffsnotes','quizlet','academia.edu','pinterest','quora','medium.com','linkedin.com','facebook.com','reddit.com','youtube.com','tiktok.com'];
-const GOOD=/(arxiv\.org|doi\.org|nature\.com|science\.org|\.edu$|\.gov$|\.ac\.[a-z]+$|brookings|pewresearch|who\.int|oecd|worldbank|nih\.gov|reuters|bbc\.|nytimes|theguardian|economist|wsj\.com|bloomberg|apnews|npr\.org|ft\.com|wikipedia\.org|hbr\.org|mckinsey|stanford|mit\.edu|ieee|acm\.org|springer|sciencedirect|wiley|jstor)/i;
-function host(u:string){try{return new URL(u).hostname.toLowerCase()}catch{return ''}}
-function goodSrc(x:{url:string}){const h=host(x.url);return !!h&&!BAD.some(b=>h.includes(b))}
 async function research(topic:string):Promise<{title:string;url:string;snippet:string}[]>{
  const key=process.env.TAVILY_API_KEY; if(!key) return [];
  try{const r=await fetch('https://api.tavily.com/search',{method:'POST',headers:{'content-type':'application/json',authorization:'Bearer '+key},body:JSON.stringify({query:topic,max_results:10,search_depth:'basic'})});
   if(!r.ok) return [];const j=await r.json();
-  return (j.results||[]).map((x:any)=>({title:String(x.title||'').slice(0,120),url:String(x.url||''),snippet:String(x.content||'').slice(0,300)})).filter(goodSrc).sort((a:any,b:any)=>Number(GOOD.test(host(b.url)))-Number(GOOD.test(host(a.url)))).slice(0,6);
+  const mapped:{title:string;url:string;snippet:string}[]=(j.results||[]).map((x:any)=>({title:String(x.title||'').slice(0,120),url:String(x.url||''),snippet:String(x.content||'').slice(0,300)})).filter(goodSrc);
+  return rankGoodFirst(mapped).slice(0,6);
  }catch{return []}
 }
 
-const STOP=new Set(['should','would','could','about','their','there','which','these','those','have','does','will','with','that','this','from','what','when','then','than','they','your','into','more','most','been','being','were','also','just','like','only','very','much','many','some','such','because','where','while','still','even','every','people']);
-function kw(t:string){return t.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w.length>3&&!STOP.has(w))}
 async function papers(topic:string):Promise<{title:string;url:string;snippet:string}[]>{
  const ws=Array.from(new Set(kw(topic))).slice(0,4);if(!ws.length)return [];
  for(const op of ['AND','OR']){
@@ -56,10 +53,6 @@ async function papers(topic:string):Promise<{title:string;url:string;snippet:str
  }
  return [];
 }
-function cites(statements:string[],src:{title:string;url:string;snippet:string}[]){
- return statements.map(st=>{const sw=new Set(kw(st));let best:any=src[0]||null,bs=0;
-  for(const x of src){const xw=new Set(kw(x.title+' '+x.snippet));let n=0;sw.forEach(w=>{if(xw.has(w))n++});if(n>bs){bs=n;best=x}}
-  return best&&(bs>=2||src.length)?{title:best.title,url:best.url}:null})}
 function ctx(src:{title:string;snippet:string}[]){return src.length?'\nBackground research (use facts from it where useful, do not invent sources):\n'+src.map((x,i)=>`${i+1}. ${x.title}: ${x.snippet}`).join('\n'):''}
 async function gemini(topic:string,key:string,c:string,style:string,mdl?:string){
  const model=mdl||process.env.GEMINI_MODEL||'gemini-3.5-flash';
@@ -72,11 +65,10 @@ async function groq(topic:string,key:string,c:string,style:string,model?:string)
  if(!r.ok){const tx=await r.text();try{const fg=JSON.parse(tx)?.error?.failed_generation;if(fg){const m=String(fg).match(/\{[\s\S]*\}/);if(m)return JSON.parse(m[0])}}catch{}throw new Error('groq '+r.status+' '+tx.slice(0,200))}
  const j=await r.json();return JSON.parse(j.choices[0].message.content.replace(/<think>[\s\S]*?<\/think>/g,''));
 }
-const NAMES=/^\s*(Dr\.\s*)?(Kavya Sharma|Rajan Mehta|Neha Joshi|Arjun Das|Priya Rao|Leela Sen|Vikram Singh|Kabir Shah)\s*[:\-\u2013]\s*/i;
-function clean(o:any){if(Array.isArray(o?.statements))o.statements=o.statements.map((x:any)=>String(x).replace(NAMES,'').replace(/^["\u201c]|["\u201d]$/g,'').trim());return o}
-function onTopic(o:any,topic:string){const words=topic.toLowerCase().replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w.length>3&&!['should','would','could','about','their','there','which','these','those','have','does','will'].includes(w)).map(w=>w.slice(0,5));if(!words.length)return true;const hit=o.statements.filter((t:string)=>words.some(w=>t.toLowerCase().includes(w))).length;const longest=Math.max(...o.statements.map((t:string)=>t.split(/\s+/).length));const drift=!/\b(ai|agi|artificial)\b/i.test(topic)&&o.statements.some((t:string)=>/\bAGI\b/.test(t));return hit>=3&&longest<=70&&!drift}
 const CACHE=new Map<string,{t:number;body:any}>();
 export async function POST(req:Request){
+ const rl=rateLimit('debate|'+clientIp(req),10,3600000);
+ if(!rl.ok)return NextResponse.json({error:'rate limited, try again later'},{status:429,headers:{'retry-after':String(rl.retryAfter)}});
  const {topic,style:st}=await req.json();const style=typeof st==='string'&&st in STYLES?st:'balanced';
  if(typeof topic!=='string'||!topic.trim()||topic.length>200) return NextResponse.json({error:'bad topic'},{status:400});
  const ck=style+'|'+topic.trim().toLowerCase();const hit=CACHE.get(ck);if(hit&&Date.now()-hit.t<600000)return NextResponse.json(hit.body);
@@ -91,14 +83,7 @@ export async function POST(req:Request){
  if(process.env.GEMINI_API_KEY) attempts.push(['gemini-gemini-3-flash-preview',()=>gemini(topic,process.env.GEMINI_API_KEY!,c,style,'gemini-3-flash-preview')]);
  if(process.env.GROQ_API_KEY) attempts.push(['groq',()=>groq(topic,process.env.GROQ_API_KEY!,c,style)]);
  if(process.env.GROQ_API_KEY) attempts.push(['groq-20b',()=>groq(topic,process.env.GROQ_API_KEY!,c,style,'openai/gpt-oss-20b')]);
- for(const [source,fn] of attempts){
-  for(let t=0;t<2;t++){
-   try{const o=clean(await fn());
-    const ok=Array.isArray(o?.statements)&&o.statements.length===8&&['A','B'].includes(o.winner);
-    if(ok&&onTopic(o,topic)){const body={source,...o,cites:cites(o.statements,sources),sources:sources.map(({title,url})=>({title,url}))};CACHE.set(ck,{t:Date.now(),body});return NextResponse.json(body)}
-    console.error('llm rejected',source,t,ok?'off-topic':'bad shape',JSON.stringify(o?.statements||o).slice(0,500));
-   }catch(e){console.error('llm fail',source,t,String(e).slice(0,160));if(/ (429|503)/.test(String(e)))break}
-  }
- }
+ const got=await runChain(attempts,o=>onTopic(o,topic));
+ if(got){const body={source:got.source,...got.o,cites:cites(got.o.statements,sources),sources:sources.map(({title,url})=>({title,url}))};CACHE.set(ck,{t:Date.now(),body});return NextResponse.json(body)}
  return NextResponse.json({source:'mock',sources:sources.map(({title,url})=>({title,url}))},{status:200});
 }
