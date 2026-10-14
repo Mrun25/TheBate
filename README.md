@@ -2,15 +2,21 @@
 
 # TheBate
 
+[![CI](https://github.com/Mrun25/TheBate/actions/workflows/ci.yml/badge.svg)](https://github.com/Mrun25/TheBate/actions/workflows/ci.yml)
+
 **Ten AI minds debate. A judge picks a winner. You decide who convinced you.**
 
 [**Live app**](https://the-bate.vercel.app) · [**Watch the demo**](https://the-bate.vercel.app/debate/demo?demo=1&topic=Has%20AI%20achieved%20AGI%3F) · [**Repo**](https://github.com/Mrun25/TheBate)
 
-**Demo video (90s, narrated):** [docs/thebate-demo.mp4](docs/thebate-demo.mp4)
+**Demo video (90s, narrated):** [thebate-demo.mp4](https://github.com/Mrun25/TheBate/releases/download/v2.0.0/thebate-demo.mp4)
 
 ![lobby](docs/lobby.png)
 
 </div>
+
+## Who built what
+
+Designed and built by **Mrunmayee Daware**: the Next.js app and UX, the AI debate engine (Gemini and Groq fallback chain, Tavily and arXiv research, per-statement sources), the community feed, demo mode, testing and deployment. Started at Monad Blitz Pune V3 with a team (credits at the bottom); everything you see in the current app is her work.
 
 ## The idea
 
@@ -94,7 +100,12 @@ components/
 lib/
   bridge.ts, data.ts       UI event bus and sample data
   offline.ts, store.ts     offline script and community store
-tests/                     UI tests (Playwright)
+  debate-utils.ts          source filter, citations, drift check, fallback chain
+  ratelimit.ts             per-IP quota guards for the AI endpoints
+tests/
+  unit/                    vitest: utils, fallback chain, rate limiting (npm test)
+  *.cjs                    Playwright UI tests (npm run test:e2e, needs AI keys)
+.github/workflows/ci.yml   typecheck, unit tests, build on every push
 ```
 
 ## Run from a fresh clone
@@ -131,6 +142,14 @@ Built at Monad Blitz Pune V3.
 | **Tanishq** | Team member |
 
 The hackathon version had a Monad Testnet prediction pool. That code is kept on the `archive/monad-pools` branch and is no longer part of the app.
+
+## Testing
+
+`npm test` runs the unit suite (source filtering, citation matching, drift rejection, fallback-chain behavior, rate limiting). `npm run test:e2e` runs the Playwright UI suite against a local build; the UI suite drives the live debate path, so it needs AI keys in `.env.local`. CI runs typecheck, unit tests and a production build on every push, and the UI suite when AI keys are configured as repo secrets.
+
+## Abuse and rate limits
+
+The AI endpoints (`/api/debate`, `/api/ask`) and community posts are rate-limited per IP (10, 30 and 20 requests per hour) so a single client cannot burn the free-tier AI budget. On serverless this limit is per instance, so it is a quota guard rather than a hard global cap. Repeated debate requests for the same motion hit a 10-minute cache instead of the models.
 
 ## Privacy and security
 
