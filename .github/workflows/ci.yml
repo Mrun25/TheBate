@@ -1,0 +1,52 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+  e2e:
+    # UI tests drive the live debate path, so they need an AI key as a repo
+    # secret (GEMINI_API_KEY and/or GROQ_API_KEY). The job skips cleanly
+    # until one is added; unit tests in the build job always run.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: keys
+        run: |
+          if [ -z "${{ secrets.GEMINI_API_KEY }}" ] && [ -z "${{ secrets.GROQ_API_KEY }}" ]; then
+            echo "No AI key secret configured; skipping e2e (see ci.yml comment)."
+            echo "skip=1" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/setup-node@v4
+        if: steps.keys.outputs.skip != '1'
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+        if: steps.keys.outputs.skip != '1'
+      - run: npx playwright install --with-deps chromium
+        if: steps.keys.outputs.skip != '1'
+      - run: npm run build
+        if: steps.keys.outputs.skip != '1'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      - name: Expose Playwright chromium path
+        if: steps.keys.outputs.skip != '1'
+        run: echo "CHROME_PATH=$(node -e "console.log(require('playwright').chromium.executablePath())")" >> "$GITHUB_ENV"
+      - name: Start the app
+        if: steps.keys.outputs.skip != '1'
+        run: |
+          GEMINI_API_KEY="${{ secrets.GEMINI_API_KEY }}" GROQ_API_KEY="${{ secrets.GROQ_API_KEY }}" npm run start &
+          for i in $(seq 1 30); do curl -sf http://localhost:3000 > /dev/null && exit 0; sleep 2; done; exit 1
+      - run: npm run test:e2e
+        if: steps.keys.outputs.skip != '1'
