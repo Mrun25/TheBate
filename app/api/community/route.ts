@@ -1,9 +1,12 @@
 import {NextResponse} from 'next/server';
+import {rateLimit,clientIp} from '@/lib/ratelimit';
 import {readPosts,writePosts,Post} from '@/lib/store';
 export const runtime='nodejs';
 const brief=(p:Post)=>({id:p.id,kind:p.kind,topic:p.topic,createdAt:p.createdAt,judge:p.judge,likes:p.likes.length,comments:p.comments.length});
 export async function GET(){const posts=await readPosts();return NextResponse.json({posts:posts.sort((a,b)=>b.createdAt-a.createdAt).map(brief)})}
 export async function POST(req:Request){
+ const rl=rateLimit('community|'+clientIp(req),20,3600000);
+ if(!rl.ok)return NextResponse.json({error:'rate limited, try again later'},{status:429,headers:{'retry-after':String(rl.retryAfter)}});
  let b:any;try{b=await req.json()}catch{return NextResponse.json({error:'bad json'},{status:400})}
  const topic=String(b.topic||'').trim().slice(0,200);const kind=b.kind==='thinkalong'?'thinkalong':'debate';
  const st=Array.isArray(b.statements)?b.statements.slice(0,40).map((s:any)=>({agentId:String(s.agentId||'').slice(0,12),type:String(s.type||'').slice(0,20),text:String(s.text||'').slice(0,1500)})):[];

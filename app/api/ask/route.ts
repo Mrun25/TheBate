@@ -1,4 +1,5 @@
 import {NextResponse} from 'next/server';
+import {rateLimit,clientIp} from '@/lib/ratelimit';
 export const runtime='nodejs';
 export const maxDuration=40;
 type Src={title:string;url:string;snippet:string};
@@ -24,6 +25,8 @@ async function gemini(key:string,p:{system:string;user:string}){
  if(!r.ok)throw new Error('gemini '+r.status);const j=await r.json();return String(j.candidates[0].content.parts[0].text||'').trim();
 }
 export async function POST(req:Request){
+ const rl=rateLimit('ask|'+clientIp(req),30,3600000);
+ if(!rl.ok)return NextResponse.json({error:'rate limited, try again later'},{status:429,headers:{'retry-after':String(rl.retryAfter)}});
  let b:any;try{b=await req.json()}catch{return NextResponse.json({error:'bad json'},{status:400})}
  const topic=String(b.topic||'').slice(0,200),q=String(b.question||'').trim().slice(0,500),name=String(b.name||'Dr. Kavya Sharma').slice(0,60),role=String(b.role||'Cognitive scientist').slice(0,60);
  const recent=Array.isArray(b.recent)?b.recent.map((x:any)=>String(x)).slice(-6):[];
